@@ -52,14 +52,22 @@ flowchart LR
 
 ## Benchmark
 
-Same 170,000-row extract, fresh database each time ([docs/benchmark-sqlite.md](docs/benchmark-sqlite.md)):
+SQLite, same 170,000-row extract, fresh database each time ([docs/benchmark-sqlite.md](docs/benchmark-sqlite.md)):
 
 | Method | Rows loaded | Load time (s) | Rows/s | Speed-up vs row |
 |---|---:|---:|---:|---:|
 | row | 169,503 | 196.77 | 861 | 1.0x |
 | batch | 169,503 | 0.96 | 176,934 | 205.4x |
 
-CI also runs the pipeline and a row / batch / fast benchmark against SQL Server 2022; the table is published in each run's summary. Reproduce locally with `uv run ledger benchmark data/ledger_extract.csv`.
+SQL Server 2022, 50,000-row extract, from CI ([docs/benchmark-sqlserver.md](docs/benchmark-sqlserver.md)). The database runs on the same host here; over a real network, where every round trip costs milliseconds, the gap for row-by-row grows much wider:
+
+| Method | Rows loaded | Load time (s) | Rows/s | Speed-up vs row |
+|---|---:|---:|---:|---:|
+| row | 49,850 | 21.96 | 2,270 | 1.0x |
+| batch | 49,850 | 6.08 | 8,202 | 3.6x |
+| fast (`fast_executemany`) | 49,850 | 1.18 | 42,103 | 18.6x |
+
+Every CI run repeats this benchmark and publishes the table in the run summary. Reproduce locally with `uv run ledger benchmark data/ledger_extract.csv`.
 
 ## Project layout
 

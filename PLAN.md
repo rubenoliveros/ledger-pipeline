@@ -41,7 +41,7 @@ Every piece also runs locally (SQLite or SQL Server in Docker, local folder inst
 - [x] Validation with specific reject reasons; idempotent and forced reruns
 - [x] Row vs batch vs fast benchmark (SQLite numbers in README; SQL Server in CI)
 - [x] 19 tests; CI on SQLite and SQL Server 2022
-- [ ] First green CI run on GitHub; copy the SQL Server benchmark into the README
+- [x] First green CI run on GitHub; SQL Server benchmark in the README
 
 ## Phase 2: realistic SAP data (the "SAP side")
 We don't simulate SAP itself; we simulate what comes out of it: the file the automation downloads.
