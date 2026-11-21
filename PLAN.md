@@ -7,14 +7,16 @@ Rebuild, with synthetic data, the ERP-to-consolidation ledger pipeline: staging 
 "I moved 170,000 ledger rows a month from SAP to Oracle FCCS/HFM with staging, audit by RunID and idempotent reruns. Here is the same pattern, runnable, with synthetic data." Mirrors the production pattern (row-by-row 15 min vs batch 42 s); the demo publishes its own measured numbers.
 
 ## Phase 1: pipeline and benchmark (MVP)
-- [ ] `uv init`, pytest, ruff, CI workflow with a SQL Server service container
-- [ ] `docker compose` with SQL Server Express (or Azure SQL Edge on ARM)
-- [ ] Synthetic generator: entities, accounts, periods, 170k rows, seeded so runs repeat
-- [ ] Schemas `stg.*` (raw load) and `ctl.*` (runs: RunID, start, end, rows read/loaded/rejected, errors)
-- [ ] Data quality checks with rejected rows kept and counted
-- [ ] Idempotent rerun: same RunID input never duplicates rows
-- [ ] Benchmark: row by row vs `fast_executemany` vs bulk insert; results table + chart in README
-- [ ] Export in a consolidation-style flat file
+- [x] uv project, pytest, CI workflow (SQLite tests + SQL Server 2022 service container)
+- [ ] ruff lint in CI; commit `uv.lock`
+- [x] `docker compose` with SQL Server Express
+- [x] Synthetic generator: entities, accounts, periods, 170k rows, seeded so runs repeat
+- [x] Schemas `stg.*` and `ctl.*` (runs: RunID, start, end, rows read/loaded/rejected, timings, errors)
+- [x] Data quality checks with rejected rows kept and counted
+- [x] Idempotent rerun: same file never duplicates rows; forced rerun supersedes the old run
+- [x] Benchmark: row vs batch (SQLite, in README) and row vs batch vs `fast_executemany` (SQL Server, in CI summary)
+- [ ] Copy the SQL Server benchmark from the first green CI run into the README; add a chart
+- [x] Export in a consolidation-style flat file, with an unbalanced-documents check
 
 ## Phase 2: rule classification + LLM exception review
 - [ ] SQL rule table classifies rows (config, not code)

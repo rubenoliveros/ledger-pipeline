@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: tests (SQLite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run pytest -q
+      - name: End-to-end smoke run (170k rows)
+        run: |
+          uv run ledger generate --rows 170000
+          uv run ledger run data/ledger_extract.csv
+          uv run ledger run data/ledger_extract.csv   # second run must be skipped
+          uv run ledger export
+          uv run ledger runs
+
+  sqlserver:
+    name: end-to-end (SQL Server 2022)
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_PID: "Express"
+          MSSQL_SA_PASSWORD: "Ledger-CI-Only-2026!"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Ledger-CI-Only-2026!' -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-retries 15
+    env:
+      LEDGER_MSSQL_CONN: "DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1433;UID=sa;PWD=Ledger-CI-Only-2026!;TrustServerCertificate=yes"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --extra mssql
+      - name: Load, rerun and export against SQL Server
+        run: |
+          uv run ledger generate --rows 170000
+          uv run ledger run data/ledger_extract.csv --db mssql:// --method fast
+          uv run ledger run data/ledger_extract.csv --db mssql:// --method fast
+          uv run ledger export --db mssql://
+          uv run ledger runs --db mssql://
+      - name: Benchmark row vs batch vs fast (50k rows)
+        run: |
+          uv run ledger generate --rows 50000 --out data/bench.csv
+          uv run ledger benchmark data/bench.csv --db mssql:// --methods row,batch,fast --out docs/benchmark-sqlserver.md
+          cat docs/benchmark-sqlserver.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-sqlserver
+          path: docs/benchmark-sqlserver.md
