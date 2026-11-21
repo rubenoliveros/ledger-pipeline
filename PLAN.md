@@ -24,6 +24,18 @@ A working, very close copy of the production pipeline: SAP general ledger data i
 
 Every piece also runs locally (SQLite or SQL Server in Docker, local folder instead of Blob, mock on localhost), so CI and anyone cloning the repo never need an Azure account.
 
+## Decisions (2026-11-21)
+- **Azure:** deploy to Rubén's existing subscription (one resource group, budget alert, one-command teardown).
+- **LLM:** Azure OpenAI for live demos, same as production; a fake client for tests and CI. Token cost for ~200 lines per demo run is expected to be cents; checked before the first run.
+- **SAP extract:** the standard FAGLL03-style layout below.
+- **Dashboard:** both, a Power BI file (screenshots in the README) and a small web dashboard served next to the demo.
+
+## Build order
+1. Phase 2 (SAP-style export + parser), so everything after it works on realistic data.
+2. Phase 4 (FCCS mapping, load file, mock, client, reconciliation), runnable locally.
+3. Phase 3 (rules + Azure OpenAI review loop + audit + accuracy report).
+4. Phase 5 (Azure deployment), then Phase 6 (dashboards, GIF, docs).
+
 ## Phase 1: audited load core (done)
 - [x] Staging and control schemas, RunID audit, `rows_read = rows_loaded + rows_rejected`
 - [x] Validation with specific reject reasons; idempotent and forced reruns
@@ -87,7 +99,8 @@ We don't simulate SAP itself; we simulate what comes out of it: the file the aut
 - **Demo recording:** extract dropped in Blob, job runs, review queue, FCCS mock job succeeds, reconciliation shows zero difference.
 
 ## Phase 6: reporting and polish
-- [ ] Stakeholder dashboard: run history, rows by class, rejects by reason, LLM accuracy, reconciliation status.
+- [ ] Power BI Desktop report (`.pbix`) on the SQL database: run history, rows by class, rejects by reason, LLM accuracy vs reviewer, reconciliation status. Screenshots in the README.
+- [ ] Web dashboard with the same views, served by the demo app so anyone can open it.
 - [ ] Architecture diagram, demo GIF, "design decisions" section (why staging, why RunID, why human approval, why batch).
 
 ## Done when
