@@ -2,33 +2,41 @@
 
 [![ci](https://github.com/rubenoliveros/ledger-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/rubenoliveros/ledger-pipeline/actions/workflows/ci.yml)
 
-An audited ERP-to-consolidation ledger load: a ledger extract goes through validation into staging tables, every run is recorded with a RunID, reruns never duplicate data, and the result is rolled up into a consolidation data-load file.
+I built this pipeline to load ledger data from an ERP into a consolidation system, with every line validated, audited and loaded exactly once.
 
-> This project is very similar to a pipeline I built for production, which moves SAP ledger data into Oracle FCCS/HFM. Same architecture and design decisions; synthetic data and generic names.
+It is very similar to a pipeline I built for production, which moves SAP ledger data into Oracle FCCS/HFM. The architecture and the design decisions are the same; the data and the names are synthetic.
 
-## Why
+## Why it matters
 
-Financial close depends on loading every ledger line exactly once, proving it, and doing it fast enough to rerun when something upstream changes. The production version of this pattern loads about 170,000 transactions a month; switching from row-by-row inserts to batch loading cut the load from 15 minutes to 42 seconds. This repo reproduces that pattern so it can be run, tested and measured by anyone.
+A financial close depends on three things: every ledger line loads once, someone can prove it, and the load is fast enough to rerun when something changes upstream.
+
+In production, this pattern loads about 170,000 transactions a month. Moving from row by row inserts to batch loading cut the load from 15 minutes to 42 seconds.
+
+This repo reproduces that pattern so anyone can run it, test it and measure it.
 
 ## Run it
 
 ```bash
 git clone https://github.com/rubenoliveros/ledger-pipeline.git && cd ledger-pipeline
 uv sync
-uv run ledger generate --rows 170000        # synthetic extract with ~0.3% known defects
-uv run ledger run data/ledger_extract.csv   # validate + load, audited in ctl.*
-uv run ledger export                        # consolidation load file in out/
+uv run ledger generate --rows 170000
+uv run ledger run data/ledger_extract.csv
+uv run ledger export
 uv run pytest
 ```
 
-SQLite is the default backend, so no installation is needed. For SQL Server:
+`generate` writes a synthetic ERP extract with about 0.3% known errors. `run` validates it and loads it, with an audit record. `export` writes the consolidation load file to `out/`.
+
+SQLite is the default database, so nothing else needs to be installed. To use SQL Server:
 
 ```bash
-cp .env.example .env            # set a strong password
+cp .env.example .env
 docker compose up -d
 uv sync --extra mssql
 uv run ledger run data/ledger_extract.csv --db mssql:// --method fast
 ```
+
+Set a strong password in `.env` before starting the container.
 
 ## How it works
 
@@ -36,55 +44,66 @@ uv run ledger run data/ledger_extract.csv --db mssql:// --method fast
 flowchart LR
     A[ERP extract<br/>CSV] --> B{Validate<br/>each line}
     B -- clean --> C[(stg.ledger)]
-    B -- rejected + reason --> D[(ctl.rejects)]
+    B -- rejected with reason --> D[(ctl.rejects)]
     C --> E[Roll up by entity,<br/>account, period]
     E --> F[Consolidation<br/>load file]
     R[(ctl.runs<br/>RunID, counts, timings, status)] -.audits.- B
     R -.audits.- C
 ```
 
-- **Two schemas with different jobs.** `stg.*` holds the data, `ctl.*` holds the evidence: one `ctl.runs` row per run (file hash, method, rows read/loaded/rejected, timings, status, error) and one `ctl.rejects` row per rejected line with its reason and the raw line.
-- **Nothing disappears.** For every run, `rows_read = rows_loaded + rows_rejected`, and the tests check it.
-- **Idempotent reruns.** The business key (company, fiscal year, document, line) is the primary key, so a line cannot load twice. Loading the same file again is skipped; a forced rerun replaces what the earlier run loaded. With the batch methods this happens in one transaction, so a failure rolls back to the last good state.
-- **Overlapping extracts are safe.** Lines already loaded from another file are rejected as `key_already_loaded` instead of failing the whole load.
-- **Rejects are specific.** Missing fields, unknown accounts or companies, impossible dates, posting dates outside the period, malformed amounts, duplicates. The export also counts journal entries that no longer net to zero, so a fix happens at the source instead of in the totals.
-- **Load method is a setting.** `row` (one insert and one commit per line), `batch` (executemany in 5,000-row chunks, one commit), `fast` (SQL Server `fast_executemany`).
+* **Two schemas, two jobs.** `stg.*` holds the data and `ctl.*` holds the evidence. Each run writes one row to `ctl.runs` with the file hash, load method, row counts, timings, status and any error. Each rejected line goes to `ctl.rejects` with its reason and the original text.
+* **Nothing disappears.** In every run, rows read equal rows loaded plus rows rejected. The tests check it.
+* **Reruns are safe.** The business key is company, fiscal year, document and line, and it is the primary key, so a line cannot load twice. Loading the same file again is skipped. A forced rerun replaces what the earlier run loaded; with the batch methods this happens in one transaction, so a failure returns to the last good state.
+* **Overlapping files are handled.** Lines already loaded from another file are rejected as `key_already_loaded`, and the rest of the load continues.
+* **Rejects say why.** Missing fields, unknown accounts or companies, impossible dates, dates outside the period, malformed amounts and duplicates each have their own reason. The export also counts journal entries that no longer add up to zero, so the fix happens at the source and not in the totals.
+* **The load method is a setting.** `row` inserts and commits one line at a time. `batch` inserts 5,000 lines per call and commits once. `fast` uses `fast_executemany` on SQL Server.
 
 ## Benchmark
 
-SQLite, same 170,000-row extract, fresh database each time ([docs/benchmark-sqlite.md](docs/benchmark-sqlite.md)):
+SQLite, the same 170,000 line extract, a fresh database for each method. Source: [docs/benchmark-sqlite.md](docs/benchmark-sqlite.md).
 
-| Method | Rows loaded | Load time (s) | Rows/s | Speed-up vs row |
+| Method | Rows loaded | Seconds | Rows per second | Speed vs row |
 |---|---:|---:|---:|---:|
 | row | 169,503 | 196.77 | 861 | 1.0x |
 | batch | 169,503 | 0.96 | 176,934 | 205.4x |
 
-SQL Server 2022, 50,000-row extract, from CI ([docs/benchmark-sqlserver.md](docs/benchmark-sqlserver.md)). The database runs on the same host here; over a real network, where every round trip costs milliseconds, the gap for row-by-row grows much wider:
+SQL Server 2022, a 50,000 line extract, measured in CI. Source: [docs/benchmark-sqlserver.md](docs/benchmark-sqlserver.md).
 
-| Method | Rows loaded | Load time (s) | Rows/s | Speed-up vs row |
+| Method | Rows loaded | Seconds | Rows per second | Speed vs row |
 |---|---:|---:|---:|---:|
 | row | 49,850 | 21.96 | 2,270 | 1.0x |
 | batch | 49,850 | 6.08 | 8,202 | 3.6x |
-| fast (`fast_executemany`) | 49,850 | 1.18 | 42,103 | 18.6x |
+| fast | 49,850 | 1.18 | 42,103 | 18.6x |
 
-Every CI run repeats this benchmark and publishes the table in the run summary. Reproduce locally with `uv run ledger benchmark data/ledger_extract.csv`.
+In CI the database runs on the same machine as the pipeline. Over a real network every round trip costs milliseconds, so the gap for row by row grows much wider.
+
+Every CI run repeats this benchmark and publishes the table in the run summary. To run it yourself:
+
+```bash
+uv run ledger benchmark data/ledger_extract.csv
+```
 
 ## Project layout
 
 ```
 src/ledger/
-  generate.py   synthetic extract with balanced journal entries and injected defects
-  validate.py   line-level checks, typed rows, reject reasons
-  schema.py     stg/ctl DDL for SQLite and SQL Server
-  pipeline.py   audited, idempotent load
+  generate.py   synthetic extract with balanced journal entries and known errors
+  validate.py   line checks, typed rows, reject reasons
+  schema.py     stg and ctl tables for SQLite and SQL Server
+  pipeline.py   audited load with safe reruns
   export.py     consolidation roll-up and balance check
   benchmark.py  load method comparison
-tests/          generator, validation, accounting of every row, reruns, rollback, export
+tests/          generator, validation, row accounting, reruns, rollback, export
 ```
 
-## Next
+## What comes next
 
-Phase 2 (see [PLAN.md](PLAN.md)): SQL rules classify lines, the leftovers go to an LLM with a fixed set of classes and a required reason, a person approves or corrects each suggestion, and an evaluation report measures accuracy per prompt version.
+The full plan is in [PLAN.md](PLAN.md). These are the next steps:
+
+* **SAP side.** A realistic FAGLL03 style export, with the header blocks, subtotals and number formats the real file has, and a parser that cleans it.
+* **Oracle side.** A mock FCCS service that follows the real REST flow: upload the file, run the integration, check the job status and report rejected lines. A reconciliation compares the SQL totals with the loaded totals.
+* **Classification with review.** SQL rules classify most lines. The rest go to Azure OpenAI, which picks from a fixed list of classes and gives a reason. A person approves or corrects each suggestion, and the audit log measures accuracy.
+* **Azure.** The same flow deployed on Azure free offers, with Power BI and web dashboards.
 
 ## License
 
