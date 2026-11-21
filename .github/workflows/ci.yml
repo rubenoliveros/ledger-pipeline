@@ -11,7 +11,7 @@ jobs:
     name: tests (SQLite)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
@@ -44,10 +44,16 @@ jobs:
     env:
       LEDGER_MSSQL_CONN: "DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1433;UID=sa;PWD=Ledger-CI-Only-2026!;TrustServerCertificate=yes"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+      - name: Install Microsoft ODBC Driver 18
+        run: |
+          curl -sSL -O "https://packages.microsoft.com/config/ubuntu/$(. /etc/os-release && echo "$VERSION_ID")/packages-microsoft-prod.deb"
+          sudo dpkg -i packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
       - run: uv sync --extra mssql
       - name: Load, rerun and export against SQL Server
         run: |
