@@ -15,7 +15,7 @@ This is how I worked here:
 * Claude helped me write code, tests and documentation faster.
 * I reviewed every change, ran the tests and checked the results against what I expected.
 
-I worked in an AI-assisted software development lifecycle, or AI-SDLC: AI takes part in every step, from planning to code, tests and documentation, and a person steers and owns each decision. That is how good teams work now: hand in hand with AI, without leaving everything to it and without refusing to use it out of habit.
+I worked in an AI-assisted software development lifecycle, or AI-SDLC: AI takes part in every step, from planning to code, tests and documentation, and a person steers and owns each decision. That is how good teams work today, or at least in November 2026, when I built this repo; this field changes fast. They work hand in hand with AI, without leaving everything to it and without refusing to use it out of habit.
 
 ## What it is
 
