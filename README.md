@@ -4,17 +4,18 @@
 
 ## Read this first
 
-I built this project with AI assistance, mainly Claude. I read every line of code in this repo, I reviewed it and I ran it before it went in.
+I built this project with AI assistance, mainly Claude. Did I read every line of code? Between you and me: you got me, I skimmed some of it. What I did read, every time, was each function, closely enough to know what it does and what it should do. Then I reviewed the change and ran it.
 
-If you are hiring, this is the way of working you should be looking for. Your team will not write code from memory and recall every piece of syntax; it will work with AI every day. What matters is knowing what to ask for, catching what is wrong and owning the result.
+If you are hiring, this is the way of working you should be looking for. Your team will not write code from memory, recall every piece of syntax or search Stack Overflow for snippets to adapt to the project. It will work with an AI assistant and its harness every day. What matters is knowing what to ask for, catching what is wrong and owning the result.
 
 This is how I worked here:
 
-* I made the decisions: architecture, data model, trade-offs and what to test, based on a pipeline I built for production.
+* The original project was built for a client, and this repo is not that delivery. It shows what I did there, rebuilt with synthetic data and not necessarily with the same tools.
+* I made the decisions: architecture, data model, trade-offs and what to test.
 * Claude helped me write code, tests and documentation faster.
 * I reviewed every change, ran the tests and checked the results against what I expected.
 
-So skip the question of whether I could type all of this from memory. Clone it, run it, read the code and ask me about any decision. That conversation will tell you much more.
+I worked in an AI-assisted software development lifecycle, or AI-SDLC: AI takes part in every step, from planning to code, tests and documentation, and a person steers and owns each decision. That is how good teams work now: hand in hand with AI, without leaving everything to it and without refusing to use it out of habit.
 
 ## What it is
 
