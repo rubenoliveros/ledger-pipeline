@@ -2,6 +2,22 @@
 
 [![ci](https://github.com/rubenoliveros/ledger-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/rubenoliveros/ledger-pipeline/actions/workflows/ci.yml)
 
+## Read this first
+
+I built this project with AI assistance, mainly Claude. I read every line of code in this repo, I reviewed it and I ran it before it went in.
+
+If you are hiring, this is the way of working you should be looking for. Your team will not write code from memory and recall every piece of syntax; it will work with AI every day. What matters is knowing what to ask for, catching what is wrong and owning the result.
+
+This is how I worked here:
+
+* I made the decisions: architecture, data model, trade-offs and what to test, based on a pipeline I built for production.
+* Claude helped me write code, tests and documentation faster.
+* I reviewed every change, ran the tests and checked the results against what I expected.
+
+So skip the question of whether I could type all of this from memory. Clone it, run it, read the code and ask me about any decision. That conversation will tell you much more.
+
+## What it is
+
 I built this pipeline to load ledger data from an ERP into a consolidation system, with every line validated, audited and loaded exactly once.
 
 It is very similar to a pipeline I built for production, which moves SAP ledger data into Oracle FCCS/HFM. The architecture and the design decisions are the same; the data and the names are synthetic.
