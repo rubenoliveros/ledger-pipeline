@@ -10,7 +10,7 @@ If you are hiring, this is the way of working you should be looking for. Your te
 
 This is how I worked here:
 
-* The original project was built for a client, and this repo is not that delivery. It shows what I did there, rebuilt with synthetic data and not necessarily with the same tools.
+* The original project was built for a client, and this repo is not that delivery. Client work usually comes with NDAs and compliance rules like HIPAA or SOC 2, and I take those seriously: no client code, data or names are in here. This repo shows what I did there, rebuilt with synthetic data and not necessarily with the same tools.
 * I made the decisions: architecture, data model, trade-offs and what to test.
 * Claude helped me write code, tests and documentation faster.
 * I reviewed every change, ran the tests and checked the results against what I expected.
